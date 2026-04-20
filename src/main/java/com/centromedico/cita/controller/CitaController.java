@@ -1,160 +1,74 @@
 package com.centromedico.cita.controller;
 
+import com.centromedico.cita.model.Cita;
+import com.centromedico.cita.service.CitaService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.centromedico.cita.model.Cita;
-
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/citas")
 public class CitaController {
 
-    private List<Cita> listaCitas = new ArrayList<>();
+    private final CitaService citaService;
 
-    public CitaController() {
-        listaCitas.add(new Cita(
-                1L,
-                "Juan Perez",
-                "Dra. Soto",
-                "Medicina General",
-                "2026-04-10",
-                "09:00",
-                "PROGRAMADA"
-        ));
-
-        listaCitas.add(new Cita(
-                2L,
-                "Ana Rojas",
-                "Dr. Muñoz",
-                "Pediatria",
-                "2026-04-10",
-                "10:00",
-                "CANCELADA"
-        ));
-
-        listaCitas.add(new Cita(
-                3L,
-                "Pedro Silva",
-                "Dra. Diaz",
-                "Traumatologia",
-                "2026-04-11",
-                "11:30",
-                "PROGRAMADA"
-        ));
+    public CitaController(CitaService citaService) {
+        this.citaService = citaService;
     }
 
     @GetMapping
     public List<Cita> obtenerTodas() {
-        return listaCitas;
+        return citaService.listarTodas();
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {
-        for (Cita cita : listaCitas) {
-            if (cita.getId().equals(id)) {
-                return ResponseEntity.ok(cita);
-            }
-        }
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", "No se encontró la cita con id " + id));
+        return citaService.buscarPorId(id)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "No se encontró la cita con id " + id)));
     }
 
     @GetMapping("/paciente/{paciente}")
     public ResponseEntity<?> obtenerPorPaciente(@PathVariable String paciente) {
-        if (paciente.isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "El nombre del paciente no puede estar vacío"));
-        }
-
-        List<Cita> resultado = new ArrayList<>();
-
-        for (Cita cita : listaCitas) {
-            if (cita.getPaciente().equalsIgnoreCase(paciente)) {
-                resultado.add(cita);
-            }
-        }
-
+        List<Cita> resultado = citaService.buscarPorPaciente(paciente);
         if (resultado.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "No se encontraron citas para el paciente " + paciente));
         }
-
         return ResponseEntity.ok(resultado);
     }
 
     @GetMapping("/medico/{medico}")
     public ResponseEntity<?> obtenerPorMedico(@PathVariable String medico) {
-        if (medico.isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "El nombre del médico no puede estar vacío"));
-        }
-
-        List<Cita> resultado = new ArrayList<>();
-
-        for (Cita cita : listaCitas) {
-            if (cita.getMedico().equalsIgnoreCase(medico)) {
-                resultado.add(cita);
-            }
-        }
-
+        List<Cita> resultado = citaService.buscarPorMedico(medico);
         if (resultado.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "No se encontraron citas para el médico " + medico));
         }
-
         return ResponseEntity.ok(resultado);
     }
 
     @GetMapping("/fecha/{fecha}")
     public ResponseEntity<?> obtenerPorFecha(@PathVariable String fecha) {
-        if (!fechaValida(fecha)) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "La fecha debe tener formato YYYY-MM-DD"));
-        }
-
-        List<Cita> resultado = new ArrayList<>();
-
-        for (Cita cita : listaCitas) {
-            if (cita.getFecha().equals(fecha)) {
-                resultado.add(cita);
-            }
-        }
-
+        List<Cita> resultado = citaService.buscarPorFecha(fecha);
         if (resultado.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "No se encontraron citas para la fecha " + fecha));
         }
-
         return ResponseEntity.ok(resultado);
     }
 
     @GetMapping("/estado/{estado}")
     public ResponseEntity<?> obtenerPorEstado(@PathVariable String estado) {
-        if (!estadoValido(estado)) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Estado no válido. Use PROGRAMADA, CANCELADA o COMPLETADA"));
-        }
-
-        List<Cita> resultado = new ArrayList<>();
-
-        for (Cita cita : listaCitas) {
-            if (cita.getEstado().equalsIgnoreCase(estado)) {
-                resultado.add(cita);
-            }
-        }
-
+        List<Cita> resultado = citaService.buscarPorEstado(estado);
         if (resultado.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "No se encontraron citas con estado " + estado));
         }
-
         return ResponseEntity.ok(resultado);
     }
 
@@ -162,30 +76,25 @@ public class CitaController {
     public List<Map<String, String>> obtenerDisponibilidad() {
         List<Map<String, String>> disponibilidad = new ArrayList<>();
 
-        disponibilidad.add(crearHorario("Dra. Soto", "Medicina General", "2026-04-10", "09:00"));
-        disponibilidad.add(crearHorario("Dra. Soto", "Medicina General", "2026-04-10", "11:00"));
-        disponibilidad.add(crearHorario("Dr. Muñoz", "Pediatria", "2026-04-10", "12:00"));
-        disponibilidad.add(crearHorario("Dra. Diaz", "Traumatologia", "2026-04-11", "10:30"));
+        disponibilidad.add(crearHorario("Dra. Soto", "Medicina General", "2026-04-20", "09:00"));
+        disponibilidad.add(crearHorario("Dra. Soto", "Medicina General", "2026-04-20", "11:00"));
+        disponibilidad.add(crearHorario("Dr. Muñoz", "Pediatria", "2026-04-21", "10:00"));
+        disponibilidad.add(crearHorario("Dra. Diaz", "Traumatologia", "2026-04-22", "12:00"));
 
         return disponibilidad;
     }
 
     @GetMapping("/disponibilidad/{medico}")
     public ResponseEntity<?> obtenerDisponibilidadPorMedico(@PathVariable String medico) {
-        if (medico.isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "El nombre del médico no puede estar vacío"));
-        }
-
         List<Map<String, String>> disponibilidad = new ArrayList<>();
 
         if (medico.equalsIgnoreCase("Dra. Soto")) {
-            disponibilidad.add(crearHorario("Dra. Soto", "Medicina General", "2026-04-10", "09:00"));
-            disponibilidad.add(crearHorario("Dra. Soto", "Medicina General", "2026-04-10", "11:00"));
+            disponibilidad.add(crearHorario("Dra. Soto", "Medicina General", "2026-04-20", "09:00"));
+            disponibilidad.add(crearHorario("Dra. Soto", "Medicina General", "2026-04-20", "11:00"));
         } else if (medico.equalsIgnoreCase("Dr. Muñoz")) {
-            disponibilidad.add(crearHorario("Dr. Muñoz", "Pediatria", "2026-04-10", "12:00"));
+            disponibilidad.add(crearHorario("Dr. Muñoz", "Pediatria", "2026-04-21", "10:00"));
         } else if (medico.equalsIgnoreCase("Dra. Diaz")) {
-            disponibilidad.add(crearHorario("Dra. Diaz", "Traumatologia", "2026-04-11", "10:30"));
+            disponibilidad.add(crearHorario("Dra. Diaz", "Traumatologia", "2026-04-22", "12:00"));
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "No existe disponibilidad registrada para el médico " + medico));
@@ -194,14 +103,38 @@ public class CitaController {
         return ResponseEntity.ok(disponibilidad);
     }
 
-    private boolean estadoValido(String estado) {
-        return estado.equalsIgnoreCase("PROGRAMADA")
-                || estado.equalsIgnoreCase("CANCELADA")
-                || estado.equalsIgnoreCase("COMPLETADA");
+    @PostMapping
+    public ResponseEntity<?> crear(@Valid @RequestBody Cita cita) {
+        cita.setEstado("PROGRAMADA");
+        return citaService.agendar(cita)
+                .<ResponseEntity<?>>map(nueva -> ResponseEntity.status(HttpStatus.CREATED).body(nueva))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("error", "Ya existe una cita para ese médico en esa fecha y hora")));
     }
 
-    private boolean fechaValida(String fecha) {
-        return fecha.matches("\\d{4}-\\d{2}-\\d{2}");
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizar(@PathVariable Long id, @Valid @RequestBody Cita cita) {
+        return citaService.actualizar(id, cita)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "No se encontró la cita con id " + id)));
+    }
+
+    @PutMapping("/{id}/cancelar")
+    public ResponseEntity<?> cancelar(@PathVariable Long id) {
+        return citaService.cancelar(id)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "No se encontró la cita con id " + id)));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminar(@PathVariable Long id) {
+        if (citaService.eliminar(id)) {
+            return ResponseEntity.ok(Map.of("mensaje", "Cita eliminada correctamente"));
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "No se encontró la cita con id " + id));
     }
 
     private Map<String, String> crearHorario(String medico, String especialidad, String fecha, String hora) {
