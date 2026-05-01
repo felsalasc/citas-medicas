@@ -1,0 +1,12 @@
+mibd_high = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.sa-santiago-1.oraclecloud.com))(connect_data=(service_name=g22e613050e296e_mibd_high.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))
+
+mibd_medium = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.sa-santiago-1.oraclecloud.com))(connect_data=(service_name=g22e613050e296e_mibd_medium.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))
+
+mibd_low = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.sa-santiago-1.oraclecloud.com))(connect_data=(service_name=g22e613050e296e_mibd_low.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))
+
+mibd_tp = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.sa-santiago-1.oraclecloud.com))(connect_data=(service_name=g22e613050e296e_mibd_tp.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))
+
+mibd_tpurgent = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.sa-santiago-1.oraclecloud.com))(connect_data=(service_name=g22e613050e296e_mibd_tpurgent.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))
+
+
+
